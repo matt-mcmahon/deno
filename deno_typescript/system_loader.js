@@ -2,10 +2,12 @@
 
 // This is a specialised implementation of a System module loader.
 
-"use strict";
-
+// deno-fmt-ignore-file
 // @ts-nocheck
 /* eslint-disable */
+
+"use strict";
+
 let System, __instantiateAsync, __instantiate;
 
 (() => {
