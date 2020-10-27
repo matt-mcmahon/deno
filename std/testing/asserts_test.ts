@@ -925,3 +925,71 @@ Deno.test("Assert Throws Async Parent Error", () => {
     "Fail!",
   );
 });
+
+{
+  type O = {
+    foo: string;
+    self?: O;
+  };
+
+  Deno.test("equal given objects with self-references", () => {
+    const actual: O = { foo: "foo" };
+    actual.self = actual;
+    const expected: O = { foo: "foo" };
+    expected.self = actual;
+    assert(equal(actual, expected));
+  });
+
+  Deno.test("equal given objects with equivalent circular-reference", () => {
+    const actual: O = { foo: "foo" };
+    actual.self = actual;
+    const expected: O = { foo: "foo" };
+    expected.self = expected;
+    assert(equal(actual, expected));
+  });
+}
+
+{
+  type N = Array<number | N>;
+
+  Deno.test("equal given arrays with self-references", () => {
+    const actual: N = [1, 2, 3];
+    actual[1] = actual;
+    const expected: N = [1, 2, 3];
+    expected[1] = actual;
+    assert(equal(actual, expected));
+  });
+
+  Deno.test("equal given arrays with multiple self-references", () => {
+    const actual: N = [1, 2, 3];
+    actual[1] = actual;
+    actual[3] = actual;
+    const expected: N = [1, 2, 3];
+    expected[1] = actual;
+    expected[3] = actual;
+    assert(equal(actual, expected));
+  });
+
+  Deno.test("equal given arrays with equivalent circular-reference", () => {
+    const actual: N = [1, 2, 3];
+    actual[1] = actual;
+    const expected: N = [1, 2, 3];
+    expected[1] = expected;
+    assert(equal(actual, expected));
+  });
+
+  Deno.test("equal given arrays with deep self-reference", () => {
+    const actual: N = [1, 2];
+    actual[2] = actual;
+    const expected: N = [1, 2, [1, 2, [1, 2, [1, 2, actual]]]];
+    assert(equal(actual, expected));
+  });
+
+  Deno.test("equal given arrays with equivalent deep circular-reference", () => {
+    const actual: N = [1, 2];
+    actual[2] = actual;
+    const expected: N = [1, 2];
+    expected[2] = [1, 2, [1, 2, [1, 2, expected]]];
+    assert(equal(actual, expected));
+  });
+}

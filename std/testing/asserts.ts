@@ -78,7 +78,18 @@ function isKeyedCollection(x: unknown): x is Set<unknown> {
 }
 
 export function equal(c: unknown, d: unknown): boolean {
-  const seen = new Map();
+  // TypeScript's support for Map and Set types are very poor. The `has` methods
+  // on each aren't recognized as type guards against undefined, requiring that
+  // types that should be inferrable must instead be cast.
+
+  // deno-lint-ignore no-explicit-any
+  type SeenAB = Set<any>;
+
+  // deno-lint-ignore no-explicit-any
+  type SeenA = Map<any, SeenAB>;
+
+  const seen: SeenA = new Map();
+
   return (function compare(a: unknown, b: unknown): boolean {
     // Have to render RegExp & Date for string comparison
     // unless it's mistreated as object
@@ -104,9 +115,17 @@ export function equal(c: unknown, d: unknown): boolean {
       return true;
     }
     if (a && typeof a === "object" && b && typeof b === "object") {
-      if (seen.get(a) === b) {
+      if (seen.has(a) && (<SeenAB> seen.get(a)).has(b)) {
+        // We've seen A compared with B already
         return true;
+      } else {
+        // Always flag that we've seen A compared with B
+        const setA = seen.has(a)
+          ? seen.get(a) as SeenAB
+          : seen.set(a, new Set()).get(a) as SeenAB;
+        setA.add(b);
       }
+
       if (Object.keys(a || {}).length !== Object.keys(b || {}).length) {
         return false;
       }
@@ -119,8 +138,8 @@ export function equal(c: unknown, d: unknown): boolean {
 
         for (const [aKey, aValue] of a.entries()) {
           for (const [bKey, bValue] of b.entries()) {
-            /* Given that Map keys can be references, we need
-             * to ensure that they are also deeply equal */
+            // Given that Map keys can be references, we need
+            // to ensure that they are also deeply equal
             if (
               (aKey === aValue && bKey === bValue && compare(aKey, bKey)) ||
               (compare(aKey, bKey) && compare(aValue, bValue))
@@ -139,7 +158,6 @@ export function equal(c: unknown, d: unknown): boolean {
           return false;
         }
       }
-      seen.set(a, b);
       return true;
     }
     return false;
